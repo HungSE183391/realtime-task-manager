@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rtm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rtm
+      POSTGRES_PASSWORD: rtm_password
+      POSTGRES_DB: rtm
+    ports:
+      - "5432:5432"
+    volumes:
+      - rtm_pgdata:/var/lib/postgresql/data
+
+volumes:
+  rtm_pgdata:

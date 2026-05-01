@@ -1,0 +1,5 @@
+# Railway uses Nixpacks to detect & build Node.js apps.
+# Pin to Node 20 to avoid surprises.
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "openssl"]
