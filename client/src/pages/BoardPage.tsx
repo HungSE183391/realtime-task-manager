@@ -25,11 +25,14 @@ import TaskCard from '../components/TaskCard';
 import InviteMemberModal from '../components/modals/InviteMemberModal';
 import TaskDetailModal from '../components/modals/TaskDetailModal';
 import ChatPanel from '../components/ChatPanel';
+import VoiceRoomPanel from '../components/VoiceRoomPanel';
+import VoiceAudioMounter from '../components/VoiceAudioMounter';
 
 import { getBoard, updateBoard } from '../api/boards';
 import { updateColumn } from '../api/columns';
 import { updateTask } from '../api/tasks';
 import { useBoardSocket } from '../hooks/useBoardSocket';
+import { useVoiceRoom } from '../hooks/useVoiceRoom';
 import { useAuthStore } from '../store/authStore';
 import type { BoardDetail, Column as ColumnType, Message, Role, Task } from '../types';
 
@@ -39,6 +42,7 @@ export default function BoardPage() {
   const me = useAuthStore((s) => s.user);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [activeColumn, setActiveColumn] = useState<ColumnType | null>(null);
@@ -54,10 +58,12 @@ export default function BoardPage() {
   });
 
   useBoardSocket(id);
+  const voice = useVoiceRoom(id);
 
   const board = data?.board;
   const role = (data?.role ?? 'MEMBER') as Role;
   const isOwner = role === 'OWNER';
+  const voiceCount = voice.roomParticipants.length;
 
   useEffect(() => {
     if (!id) return;
@@ -390,6 +396,51 @@ export default function BoardPage() {
               )}
             </div>
             <motion.button
+              onClick={() => setVoiceOpen(true)}
+              className={
+                'btn-secondary relative ' +
+                (voice.joined
+                  ? 'border-emerald-400/40 text-emerald-200 ring-1 ring-emerald-400/30'
+                  : '')
+              }
+              aria-label="Open voice room"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              title={
+                voice.joined
+                  ? `Voice room (${voiceCount} connected, you're in)`
+                  : voiceCount > 0
+                    ? `Voice room (${voiceCount} talking)`
+                    : 'Voice room'
+              }
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="-ml-0.5 mr-1.5 h-4 w-4">
+                <path d="M12 14a3 3 0 003-3V6a3 3 0 10-6 0v5a3 3 0 003 3z" />
+                <path d="M19 11a1 1 0 10-2 0 5 5 0 01-10 0 1 1 0 10-2 0 7 7 0 006 6.92V20H8a1 1 0 100 2h8a1 1 0 100-2h-3v-2.08A7 7 0 0019 11z" />
+              </svg>
+              Voice
+              <AnimatePresence>
+                {voiceCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                    className="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-white shadow-md shadow-emerald-900/50"
+                  >
+                    {voiceCount}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              {voice.joined && (
+                <motion.span
+                  className="absolute -right-1 -bottom-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-950"
+                  animate={{ scale: [1, 1.3, 1] }}
+                  transition={{ duration: 1.6, repeat: Infinity }}
+                />
+              )}
+            </motion.button>
+            <motion.button
               onClick={() => setChatOpen(true)}
               className="btn-secondary relative"
               aria-label="Open chat"
@@ -482,6 +533,8 @@ export default function BoardPage() {
         columns={board.columns}
       />
       <ChatPanel boardId={board.id} open={chatOpen} onClose={() => setChatOpen(false)} />
+      <VoiceRoomPanel open={voiceOpen} onClose={() => setVoiceOpen(false)} voice={voice} />
+      <VoiceAudioMounter voice={voice} />
     </div>
   );
 }
