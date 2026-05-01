@@ -2,6 +2,7 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { verifyToken } from '../lib/jwt';
 import { prisma } from '../lib/prisma';
+import { registerVoiceHandlers } from './voice';
 
 let io: Server | null = null;
 
@@ -67,6 +68,8 @@ export function initSocket(httpServer: HttpServer, clientOrigin: string) {
     s.on('leave_board', (boardId: string) => {
       if (typeof boardId === 'string') s.leave(`board:${boardId}`);
     });
+
+    registerVoiceHandlers(io!, s);
 
     s.on('disconnect', (reason) => {
       console.log(`[socket] disconnected ${s.id}: ${reason}`);
