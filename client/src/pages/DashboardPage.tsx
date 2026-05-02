@@ -6,11 +6,13 @@ import toast from 'react-hot-toast';
 import Header from '../components/Header';
 import AddBoardModal from '../components/modals/AddBoardModal';
 import { deleteBoard, listBoards } from '../api/boards';
+import { useAuthStore } from '../store/authStore';
 import type { BoardSummary } from '../types';
 
 export default function DashboardPage() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
 
   const { data: boards, isLoading, error } = useQuery({
     queryKey: ['boards'],
@@ -31,65 +33,80 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+        {/* Page header */}
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand-300">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-violet-400">
               Workspace
             </p>
-            <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-              Your boards
+            <h1 className="text-2xl font-bold tracking-tight text-white">
+              {user?.name ? `${user.name.split(' ')[0]}'s boards` : 'Your boards'}
             </h1>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-1 text-[13px] text-slate-500">
               Plan, track, and collaborate in real time.
             </p>
           </div>
           <motion.button
             onClick={() => setOpen(true)}
-            className="btn-primary"
-            whileHover={{ scale: 1.04, y: -1 }}
-            whileTap={{ scale: 0.96 }}
+            className="btn-primary text-[13px]"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
           >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="-ml-1 mr-1.5 h-4 w-4">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
               <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z" />
             </svg>
             New board
           </motion.button>
         </div>
 
+        {/* Loading skeletons */}
         {isLoading && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="card h-36 animate-pulse" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="skeleton h-[100px] rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
             ))}
           </div>
         )}
-        {error && (
-          <div className="card p-6 text-center text-red-300">Failed to load boards.</div>
-        )}
 
-        {boards && boards.length === 0 && (
-          <div className="card animate-fade-in p-12 text-center">
-            <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-brand shadow-glow">
-              <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7 text-white">
-                <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-white">No boards yet</h2>
-            <p className="mt-1 text-sm text-slate-400">Create your first board to get started.</p>
-            <button onClick={() => setOpen(true)} className="btn-primary mt-5">
-              Create your first board
-            </button>
+        {/* Error */}
+        {error && (
+          <div className="card p-6 text-center text-[13px] text-red-400">
+            Failed to load boards. Please try again.
           </div>
         )}
 
+        {/* Empty state */}
+        {boards && boards.length === 0 && (
+          <motion.div
+            className="card animate-fade-in flex flex-col items-center p-16 text-center"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 ring-1 ring-violet-400/20">
+              <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7 text-violet-400">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </div>
+            <h2 className="text-[17px] font-semibold text-white">No boards yet</h2>
+            <p className="mt-1 text-[13px] text-slate-500">Create your first board to get started.</p>
+            <button onClick={() => setOpen(true)} className="btn-primary mt-5 text-[13px]">
+              Create your first board
+            </button>
+          </motion.div>
+        )}
+
+        {/* Board grid */}
         {boards && boards.length > 0 && (
           <motion.ul
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
             initial="hidden"
             animate="visible"
             variants={{
-              visible: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
+              visible: { transition: { staggerChildren: 0.05 } },
               hidden: {},
             }}
           >
@@ -115,13 +132,7 @@ export default function DashboardPage() {
   );
 }
 
-function BoardCard({
-  board,
-  onDelete,
-}: {
-  board: BoardSummary;
-  onDelete: () => void;
-}) {
+function BoardCard({ board, onDelete }: { board: BoardSummary; onDelete: () => void }) {
   const navigate = useNavigate();
 
   function handleCardClick(e: React.MouseEvent) {
@@ -130,65 +141,69 @@ function BoardCard({
     navigate(`/boards/${board.id}`);
   }
 
+  const initials = board.title.charAt(0).toUpperCase();
+  const colors = ['from-violet-600 to-indigo-600', 'from-cyan-600 to-blue-600', 'from-fuchsia-600 to-violet-600', 'from-emerald-600 to-cyan-600'];
+  const colorClass = colors[board.title.charCodeAt(0) % colors.length];
+
   return (
     <motion.li
       layout
       variants={{
-        hidden: { opacity: 0, y: 16, scale: 0.97 },
+        hidden: { opacity: 0, y: 12, scale: 0.97 },
         visible: { opacity: 1, y: 0, scale: 1 },
       }}
-      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.18 } }}
-      transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-      whileHover={{ y: -4, transition: { type: 'spring', stiffness: 400, damping: 20 } }}
-      className="card card-hover group relative cursor-pointer overflow-hidden p-5"
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+      transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+      className="card-interactive group relative cursor-pointer overflow-hidden"
       onClick={handleCardClick}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-brand-400/60 to-transparent opacity-0 transition group-hover:opacity-100"
-      />
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <Link
-          to={`/boards/${board.id}`}
-          className="text-lg font-bold tracking-tight text-white transition hover:text-brand-300"
-        >
-          {board.title}
-        </Link>
-        <span
-          className={
-            board.role === 'OWNER'
-              ? 'inline-flex items-center rounded-full border border-brand-400/30 bg-brand-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-200'
-              : 'inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300'
-          }
-        >
-          {board.role}
-        </span>
-      </div>
-      <div className="flex items-center gap-3 text-xs text-slate-400">
-        <span className="inline-flex items-center gap-1">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-            <path d="M3 4a1 1 0 011-1h4a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm8 0a1 1 0 011-1h4a1 1 0 011 1v8a1 1 0 01-1 1h-4a1 1 0 01-1-1V4z" />
-          </svg>
-          {board._count?.columns ?? 0} columns
-        </span>
-        <span className="text-slate-600">•</span>
-        <span className="inline-flex items-center gap-1">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-          </svg>
-          {board._count?.members ?? 0} members
-        </span>
-      </div>
-      {board.role === 'OWNER' && (
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <button
-            onClick={onDelete}
-            className="text-xs font-medium text-red-400 transition hover:text-red-300"
-          >
-            Delete
-          </button>
+      {/* Top accent bar */}
+      <div className={`h-0.5 w-full bg-gradient-to-r ${colorClass} opacity-70`} />
+
+      <div className="p-4">
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${colorClass} text-sm font-semibold text-white shadow-sm`}>
+              {initials}
+            </div>
+            <Link
+              to={`/boards/${board.id}`}
+              className="text-[15px] font-semibold tracking-tight text-white transition-colors hover:text-violet-300 line-clamp-1"
+            >
+              {board.title}
+            </Link>
+          </div>
+          <span className={board.role === 'OWNER' ? 'badge-owner shrink-0' : 'badge-member shrink-0'}>
+            {board.role}
+          </span>
         </div>
-      )}
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 text-[12px] text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 text-slate-600">
+                <path d="M2 3a1 1 0 011-1h2a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm5 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1H8a1 1 0 01-1-1V3z" />
+              </svg>
+              {board._count?.columns ?? 0} columns
+            </span>
+            <span className="flex items-center gap-1.5">
+              <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 text-slate-600">
+                <path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 6s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3z" />
+              </svg>
+              {board._count?.members ?? 0} members
+            </span>
+          </div>
+
+          {board.role === 'OWNER' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="text-[11px] font-medium text-slate-600 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      </div>
     </motion.li>
   );
 }

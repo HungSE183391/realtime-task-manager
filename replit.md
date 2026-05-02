@@ -18,6 +18,20 @@ A Kanban-style realtime task manager (like Trello/Notion mini) supporting multip
 | Auth | JWT (email + password, bcrypt) |
 | Validation | Zod |
 
+## Design System
+
+Premium dark glassmorphism UI inspired by Linear/Notion/Stripe:
+
+- **Background**: `#080c14` with radial violet/cyan gradient overlays
+- **Primary**: Violet `#7c3aed` / `#8b5cf6`
+- **Accent**: Cyan `#06b6d4`
+- **Typography**: Inter (Google Fonts) — tight tracking, clear hierarchy
+- **Surfaces**: `glass`, `glass-md`, `glass-strong`, `card`, `card-interactive`
+- **Buttons**: `btn-primary`, `btn-secondary`, `btn-danger`, `btn-ghost`, `btn-icon`
+- **Forms**: `.input`, `.label`, `.select`
+- **Badges**: `badge-owner`, `badge-member`, `badge-admin`
+- **Animations**: Framer Motion throughout — spring physics, staggered lists, slide panels
+
 ## Project Structure
 
 ```
@@ -26,14 +40,23 @@ realtime-task-manager/
 │   ├── src/
 │   │   ├── api/              # axios endpoint helpers
 │   │   ├── components/       # Header, Column, TaskCard, AddColumnInline, modals
-│   │   ├── hooks/            # useBoardSocket
+│   │   │   ├── modals/       # Modal, AddBoardModal, TaskDetailModal, InviteMemberModal
+│   │   │   ├── ChatPanel.tsx
+│   │   │   ├── DMHub.tsx
+│   │   │   ├── TaskComments.tsx
+│   │   │   ├── TaskAttachments.tsx
+│   │   │   ├── VoiceRoomPanel.tsx
+│   │   │   └── VoiceAudioMounter.tsx
+│   │   ├── hooks/            # useBoardSocket, useDMSocket, useVoiceRoom
 │   │   ├── lib/              # axios, socket, queryClient
-│   │   ├── pages/            # LoginPage, RegisterPage, DashboardPage, BoardPage
-│   │   ├── store/            # authStore (zustand + persist)
+│   │   ├── pages/            # LoginPage, RegisterPage, DashboardPage, BoardPage, AdminPage
+│   │   ├── store/            # authStore (zustand + persist), dmHubStore
 │   │   └── types/
+│   ├── src/index.css         # Full design system: glass, btn-*, input, label, badge, skeleton
+│   └── tailwind.config.js    # Extended palette: brand (violet), accent (cyan), surface colors
 ├── server/                   # Express + Socket.IO (port 4000)
 │   ├── src/
-│   │   ├── controllers/      # auth, board, column, task, admin, dm
+│   │   ├── controllers/      # auth, board, column, task, admin, dm, message, attachment
 │   │   ├── middleware/       # authJwt, boardPermission, errorHandler
 │   │   ├── routes/           # auth, boards, columns, tasks, dm, admin
 │   │   ├── schemas/          # zod input schemas
@@ -76,12 +99,13 @@ cd server && npx prisma migrate deploy
 
 - User registration and login (JWT auth)
 - Create and manage boards
-- Add/rename/delete columns
-- Add/update/delete tasks (with descriptions, due dates, assignees, completion)
-- Drag-and-drop task reordering (float position "gap strategy")
+- Add/rename/delete columns (inline, sortable via DnD)
+- Add/update/delete tasks (descriptions, due dates, assignees, completion toggle)
+- Drag-and-drop task reordering + column reordering (optimistic UI)
 - Real-time sync across multiple users via Socket.IO
-- Board member management (invite/kick by email)
-- Direct messages between users
-- Comments and attachments on tasks
+- Board member management (invite/remove by email)
+- Direct messages between users (DMHub slide-over panel)
+- Comments and file attachments on tasks
 - Admin role (auto-promoted to oldest user)
-- Board chat/messaging
+- Board chat panel (per-board messaging)
+- Voice rooms (WebRTC peer-to-peer audio)

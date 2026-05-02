@@ -42,86 +42,88 @@ export default function InviteMemberModal({ open, onClose, board, role }: Props)
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Members">
+    <Modal open={open} onClose={onClose} title="Board members">
+      {/* Invite form */}
       {isOwner && (
-        <form onSubmit={onSubmit} className="mb-5 flex gap-2">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Invite by email..."
-            className="input"
-            required
-          />
-          <button type="submit" className="btn-primary shrink-0" disabled={inviteMutation.isPending}>
-            Invite
-          </button>
-        </form>
+        <div className="mb-5">
+          <label className="label">Invite by email</label>
+          <form onSubmit={onSubmit} className="flex gap-2">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="colleague@company.com"
+              className="input text-[13px]"
+              required
+            />
+            <button
+              type="submit"
+              className="btn-primary shrink-0 text-[13px]"
+              disabled={inviteMutation.isPending}
+            >
+              {inviteMutation.isPending ? 'Inviting…' : 'Invite'}
+            </button>
+          </form>
+        </div>
       )}
 
-      <ul className="divide-y divide-white/5 overflow-hidden rounded-lg border border-white/10 bg-slate-950/40">
-        {board.members.map((m) => (
-          <li key={m.id} className="flex items-center justify-between gap-3 p-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-brand text-sm font-bold text-white">
-                {m.user.name.charAt(0).toUpperCase()}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-100">{m.user.name}</p>
-                <p className="truncate text-xs text-slate-400">{m.user.email}</p>
+      {/* Members list */}
+      <div>
+        <p className="label mb-3">Members · {board.members.length}</p>
+        <div className="divide-y divide-white/[0.05] rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+          {board.members.map((m) => (
+            <div key={m.id} className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/[0.03] transition-colors">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="avatar h-8 w-8 text-[12px] shrink-0">
+                  {m.user.name.charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium text-slate-200">{m.user.name}</p>
+                  <p className="truncate text-[11px] text-slate-500">{m.user.email}</p>
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <span className={m.role === 'OWNER' ? 'badge-owner' : 'badge-member'}>
+                  {m.role}
+                </span>
+
+                {me && m.userId !== me.id && (
+                  <button
+                    type="button"
+                    onClick={() => { openDMWith(m.user); onClose(); }}
+                    className="btn-icon h-7 w-7 text-slate-500 hover:text-violet-400"
+                    title={`Message ${m.user.name}`}
+                  >
+                    <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5">
+                      <path d="M14 3v8a1.5 1.5 0 01-1.5 1.5H4.5L2 15V3A1.5 1.5 0 013.5 1.5h9A1.5 1.5 0 0114 3z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                )}
+
+                {isOwner && m.role !== 'OWNER' && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Remove ${m.user.name} from this board?`)) {
+                        removeMutation.mutate(m.userId);
+                      }
+                    }}
+                    className="btn-icon h-7 w-7 text-slate-600 hover:text-red-400"
+                    title="Remove member"
+                  >
+                    <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+                      <path d="M6.5 1.75a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3zM2 4.25a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H13l-.5 7.5A2 2 0 0110.5 14.5h-5A2 2 0 013.5 12.5L3 5H2.75A.75.75 0 012 4.25z" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <span
-                className={
-                  m.role === 'OWNER'
-                    ? 'inline-flex items-center rounded-full border border-brand-400/30 bg-brand-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-200'
-                    : 'inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300'
-                }
-              >
-                {m.role}
-              </span>
-              {me && m.userId !== me.id && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    openDMWith(m.user);
-                    onClose();
-                  }}
-                  className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs font-medium text-slate-200 transition hover:border-brand-400/40 hover:bg-brand-500/15 hover:text-brand-100"
-                  title={`Message ${m.user.name}`}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
-                    <path
-                      d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Message
-                </button>
-              )}
-              {isOwner && m.role !== 'OWNER' && (
-                <button
-                  onClick={() => {
-                    if (confirm(`Remove ${m.user.name} from this board?`)) {
-                      removeMutation.mutate(m.userId);
-                    }
-                  }}
-                  className="text-xs font-medium text-red-400 transition hover:text-red-300"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+          ))}
+        </div>
+      </div>
 
-      <div className="mt-6 flex justify-end">
-        <button onClick={onClose} className="btn-secondary">
+      <div className="mt-4 flex justify-end">
+        <button onClick={onClose} className="btn-secondary text-[13px]">
           Close
         </button>
       </div>

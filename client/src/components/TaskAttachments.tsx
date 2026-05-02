@@ -13,13 +13,9 @@ import {
 import { useAuthStore } from '../store/authStore';
 import type { Attachment } from '../types';
 
-interface Props {
-  taskId: string;
-}
-
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-export default function TaskAttachments({ taskId }: Props) {
+export default function TaskAttachments({ taskId }: { taskId: string }) {
   const me = useAuthStore((s) => s.user);
   const qc = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -33,32 +29,26 @@ export default function TaskAttachments({ taskId }: Props) {
   const uploadMutation = useMutation({
     mutationFn: (file: File) => uploadAttachment(taskId, file),
     onSuccess: () => toast.success('File uploaded'),
-    onError: (err: any) =>
-      toast.error(err?.response?.data?.error || 'Upload failed'),
+    onError: (err: any) => toast.error(err?.response?.data?.error || 'Upload failed'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteAttachment(id),
     onMutate: async (id) => {
       const prev = qc.getQueryData<Attachment[]>(['attachments', taskId]);
-      qc.setQueryData<Attachment[]>(['attachments', taskId], (old) =>
-        old ? old.filter((a) => a.id !== id) : old,
-      );
+      qc.setQueryData<Attachment[]>(['attachments', taskId], (old) => old ? old.filter((a) => a.id !== id) : old);
       return { prev };
     },
     onError: (err: any, _id, ctx) => {
       if (ctx?.prev) qc.setQueryData(['attachments', taskId], ctx.prev);
-      toast.error(err?.response?.data?.error || 'Failed to delete file');
+      toast.error(err?.response?.data?.error || 'Failed to delete');
     },
   });
 
   function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     const file = files[0];
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error('File too large (max 10 MB)');
-      return;
-    }
+    if (file.size > MAX_FILE_SIZE) { toast.error('File too large (max 10 MB)'); return; }
     uploadMutation.mutate(file);
   }
 
@@ -68,95 +58,101 @@ export default function TaskAttachments({ taskId }: Props) {
     handleFiles(e.dataTransfer.files);
   }
 
-  function onChange(e: ChangeEvent<HTMLInputElement>) {
-    handleFiles(e.target.files);
-    e.target.value = '';
-  }
-
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-          Attachments {attachments.length > 0 && (
-            <span className="ml-1 text-xs font-normal text-slate-500">
-              ({attachments.length})
-            </span>
-          )}
-        </h3>
+        <div className="flex items-center gap-2">
+          <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4 text-slate-500">
+            <path d="M9.5 2a2.5 2.5 0 013.536 3.536L5.293 13.28a4 4 0 11-5.657-5.657L8.5 0.5" />
+          </svg>
+          <h3 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500">
+            Attachments
+            {attachments.length > 0 && (
+              <span className="ml-1.5 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-normal text-slate-500 normal-case tracking-normal">
+                {attachments.length}
+              </span>
+            )}
+          </h3>
+        </div>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploadMutation.isPending}
-          className="btn-ghost text-xs"
+          className="btn-ghost text-[11px] py-1 px-2"
         >
-          {uploadMutation.isPending ? 'Uploading...' : '+ Add file'}
+          {uploadMutation.isPending ? (
+            <span className="flex items-center gap-1.5">
+              <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Uploading…
+            </span>
+          ) : (
+            <>
+              <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
+                <path d="M8 1a.75.75 0 01.75.75v5.5h5.5a.75.75 0 010 1.5h-5.5v5.5a.75.75 0 01-1.5 0V8.75H1.75a.75.75 0 010-1.5H7.25V1.75A.75.75 0 018 1z" />
+              </svg>
+              Add file
+            </>
+          )}
         </button>
-        <input
-          ref={inputRef}
-          type="file"
-          className="hidden"
-          onChange={onChange}
-        />
+        <input ref={inputRef} type="file" className="hidden" onChange={(e: ChangeEvent<HTMLInputElement>) => { handleFiles(e.target.files); e.target.value = ''; }} />
       </div>
 
+      {/* Drop zone */}
       <motion.div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragActive(true);
-        }}
+        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
         onDragLeave={() => setDragActive(false)}
         onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
         animate={{
-          borderColor: dragActive ? 'rgba(139, 92, 246, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-          backgroundColor: dragActive ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+          borderColor: dragActive ? 'rgba(124, 58, 237, 0.5)' : 'rgba(255, 255, 255, 0.07)',
+          backgroundColor: dragActive ? 'rgba(124, 58, 237, 0.06)' : 'rgba(255, 255, 255, 0.02)',
         }}
-        transition={{ duration: 0.15 }}
-        className="rounded-xl border border-dashed px-3 py-4 text-center text-xs text-slate-400"
+        transition={{ duration: 0.12 }}
+        className="flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-dashed px-4 py-5 text-center transition-colors hover:border-white/[0.12] hover:bg-white/[0.03]"
       >
-        {dragActive
-          ? 'Drop file here to upload'
-          : 'Drag & drop a file here, or click "+ Add file" (max 10 MB)'}
+        <svg viewBox="0 0 24 24" fill="none" className={clsx('h-6 w-6 transition-colors', dragActive ? 'text-violet-400' : 'text-slate-600')}>
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <p className="text-[11px] text-slate-600">
+          {dragActive ? 'Release to upload' : 'Drag & drop or click to upload'}
+        </p>
+        <p className="text-[10px] text-slate-700">Max 10 MB</p>
       </motion.div>
 
-      <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+      {/* Attachments list */}
+      <div className="max-h-48 space-y-1.5 overflow-y-auto pr-0.5">
         {isLoading && (
-          <p className="text-center text-xs text-slate-500">Loading attachments...</p>
+          <div className="flex items-center justify-center py-4">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" />
+          </div>
         )}
         <AnimatePresence initial={false}>
-          {attachments.map((a) => {
-            const canDelete = a.userId === me?.id;
-            return (
-              <motion.div
-                key={a.id}
-                layout
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-              >
-                <AttachmentRow
-                  attachment={a}
-                  canDelete={canDelete}
-                  onDelete={() => deleteMutation.mutate(a.id)}
-                />
-              </motion.div>
-            );
-          })}
+          {attachments.map((a) => (
+            <motion.div
+              key={a.id}
+              layout
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            >
+              <AttachmentRow
+                attachment={a}
+                canDelete={a.userId === me?.id}
+                onDelete={() => deleteMutation.mutate(a.id)}
+              />
+            </motion.div>
+          ))}
         </AnimatePresence>
       </div>
     </div>
   );
 }
 
-function AttachmentRow({
-  attachment: a,
-  canDelete,
-  onDelete,
-}: {
-  attachment: Attachment;
-  canDelete: boolean;
-  onDelete: () => void;
-}) {
+function AttachmentRow({ attachment: a, canDelete, onDelete }: { attachment: Attachment; canDelete: boolean; onDelete: () => void }) {
   const isImage = a.mimeType.startsWith('image/');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -164,78 +160,56 @@ function AttachmentRow({
     if (!isImage) return;
     let revoke: string | null = null;
     let cancelled = false;
-    fetchAttachmentObjectUrl(a)
-      .then((url) => {
-        if (cancelled) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-        revoke = url;
-        setPreviewUrl(url);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-      if (revoke) URL.revokeObjectURL(revoke);
-    };
+    fetchAttachmentObjectUrl(a).then((url) => {
+      if (cancelled) { URL.revokeObjectURL(url); return; }
+      revoke = url;
+      setPreviewUrl(url);
+    }).catch(() => undefined);
+    return () => { cancelled = true; if (revoke) URL.revokeObjectURL(revoke); };
   }, [a.id, isImage]);
 
   return (
-    <div
-      className={clsx(
-        'group flex items-center gap-3 rounded-lg border border-white/10 bg-slate-950/40 p-2.5 transition hover:border-brand-400/30 hover:bg-white/5',
-      )}
-    >
-      <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gradient-brand text-white">
+    <div className="group flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] p-2.5 transition-all hover:border-white/[0.12] hover:bg-white/[0.05]">
+      {/* Thumbnail / icon */}
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-brand text-[10px] font-bold text-white">
         {previewUrl ? (
-          <img
-            src={previewUrl}
-            alt={a.originalName}
-            className="h-full w-full object-cover"
-          />
+          <img src={previewUrl} alt={a.originalName} className="h-full w-full object-cover" />
         ) : (
           <FileIcon mime={a.mimeType} />
         )}
       </div>
+
       <div className="min-w-0 flex-1">
-        <p
-          className="truncate text-sm font-semibold text-slate-100"
-          title={a.originalName}
-        >
+        <p className="truncate text-[12px] font-medium text-slate-200" title={a.originalName}>
           {a.originalName}
         </p>
-        <p className="text-[10px] uppercase tracking-wider text-slate-500">
-          {formatBytes(a.size)} · {a.user.name} · {new Date(a.createdAt).toLocaleDateString()}
+        <p className="text-[10px] text-slate-600">
+          {formatBytes(a.size)} · {a.user.name}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <motion.button
+
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
+        <button
           type="button"
           onClick={() => downloadAttachment(a)}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition hover:bg-white/5 hover:text-brand-300"
+          className="btn-icon h-7 w-7 text-slate-500 hover:text-violet-400"
           title="Download"
-          aria-label="Download"
         >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path d="M10 2a1 1 0 011 1v8.59l2.3-2.3a1 1 0 011.4 1.42l-4 4a1 1 0 01-1.4 0l-4-4A1 1 0 016.7 9.3l2.3 2.3V3a1 1 0 011-1zM3 16a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+          <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+            <path d="M8 1a.75.75 0 01.75.75v7.19l1.97-1.97a.75.75 0 111.06 1.06l-3.25 3.25a.75.75 0 01-1.06 0L4.22 8.03a.75.75 0 111.06-1.06l1.97 1.97V1.75A.75.75 0 018 1zM1.5 13.5a.75.75 0 000 1.5h13a.75.75 0 000-1.5h-13z" />
           </svg>
-        </motion.button>
+        </button>
         {canDelete && (
-          <motion.button
+          <button
             type="button"
             onClick={onDelete}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/15 hover:text-red-400"
+            className="btn-icon h-7 w-7 text-slate-500 hover:text-red-400"
             title="Delete"
-            aria-label="Delete"
           >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-              <path d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" />
+            <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+              <path d="M6.5 1.75a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3zM2 4.25a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H13l-.5 7.5A2 2 0 0110.5 14.5h-5A2 2 0 013.5 12.5L3 5H2.75A.75.75 0 012 4.25z" />
             </svg>
-          </motion.button>
+          </button>
         )}
       </div>
     </div>
@@ -250,7 +224,7 @@ function FileIcon({ mime }: { mime: string }) {
   else if (mime.includes('pdf')) label = 'PDF';
   else if (mime.includes('zip') || mime.includes('compressed')) label = 'ZIP';
   else if (mime.includes('text') || mime.includes('json') || mime.includes('xml')) label = 'TXT';
-  return <span className="text-[10px] font-bold tracking-wider">{label}</span>;
+  return <span className="text-[9px] font-bold tracking-wider">{label}</span>;
 }
 
 function formatBytes(bytes: number): string {

@@ -1,10 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +21,7 @@ export default function Column({ column, onTaskClick }: Props) {
   const [taskTitle, setTaskTitle] = useState('');
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const sortable = useSortable({
     id: `col:${column.id}`,
@@ -71,6 +68,7 @@ export default function Column({ column, onTaskClick }: Props) {
   }
 
   function onDelete() {
+    setMenuOpen(false);
     if (!confirm(`Delete column "${column.title}" and all its tasks?`)) return;
     deleteMutation.mutate();
   }
@@ -81,7 +79,7 @@ export default function Column({ column, onTaskClick }: Props) {
   const style: React.CSSProperties = {
     transform: CSS.Translate.toString(sortable.transform),
     transition: sortable.transition,
-    opacity: sortable.isDragging ? 0.4 : 1,
+    opacity: sortable.isDragging ? 0.35 : 1,
   };
 
   return (
@@ -89,20 +87,22 @@ export default function Column({ column, onTaskClick }: Props) {
       ref={sortable.setNodeRef}
       style={style}
       {...sortable.attributes}
-      className="glass flex h-full max-h-full w-72 shrink-0 flex-col p-2 shadow-lg shadow-black/30"
+      className="flex h-full max-h-full w-[272px] shrink-0 flex-col rounded-xl border border-white/[0.07] bg-[#0a0f1a]/70 backdrop-blur-xl shadow-xl shadow-black/20"
     >
-      <div className="mb-2 flex items-center justify-between gap-2 px-2 pt-1">
+      {/* Column header */}
+      <div className="flex items-center gap-2 px-3 pt-3 pb-2">
         <button
           {...sortable.listeners}
           type="button"
           aria-label="Drag column"
-          title="Drag to reorder column"
-          className="cursor-grab text-slate-500 transition hover:text-brand-300 active:cursor-grabbing"
+          className="cursor-grab text-slate-700 transition-colors hover:text-slate-500 active:cursor-grabbing"
         >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path d="M7 4a1 1 0 100 2 1 1 0 000-2zM7 9a1 1 0 100 2 1 1 0 000-2zM7 14a1 1 0 100 2 1 1 0 000-2zM13 4a1 1 0 100 2 1 1 0 000-2zM13 9a1 1 0 100 2 1 1 0 000-2zM13 14a1 1 0 100 2 1 1 0 000-2z" />
+          <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+            <circle cx="5" cy="4" r="1.2" /><circle cx="5" cy="8" r="1.2" /><circle cx="5" cy="12" r="1.2" />
+            <circle cx="11" cy="4" r="1.2" /><circle cx="11" cy="8" r="1.2" /><circle cx="11" cy="12" r="1.2" />
           </svg>
         </button>
+
         {editingTitle ? (
           <input
             autoFocus
@@ -111,41 +111,85 @@ export default function Column({ column, onTaskClick }: Props) {
             onBlur={onTitleBlur}
             onKeyDown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-              if (e.key === 'Escape') {
-                setTitleDraft(column.title);
-                setEditingTitle(false);
-              }
+              if (e.key === 'Escape') { setTitleDraft(column.title); setEditingTitle(false); }
             }}
-            className="input h-8 py-1"
+            className="input h-7 flex-1 py-0.5 text-[13px] font-semibold"
           />
         ) : (
-          <h3
+          <button
             onClick={() => setEditingTitle(true)}
-            className="flex-1 cursor-text truncate text-sm font-bold tracking-tight text-slate-100"
+            className="flex-1 truncate text-left text-[13px] font-semibold text-slate-200 transition-colors hover:text-white"
             title="Click to rename"
           >
-            {column.title}{' '}
-            <span className="ml-1 text-xs font-normal text-slate-500">
-              {completedCount}/{column.tasks.length}
-            </span>
-          </h3>
+            {column.title}
+          </button>
         )}
-        <button
-          onClick={onDelete}
-          className="text-slate-500 transition hover:scale-110 hover:text-red-400"
-          title="Delete column"
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" />
-          </svg>
-        </button>
+
+        {/* Task count badge */}
+        <span className="ml-auto shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[11px] font-medium text-slate-500">
+          {completedCount}/{column.tasks.length}
+        </span>
+
+        {/* Actions menu */}
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="btn-icon h-6 w-6 text-slate-600 hover:text-slate-400"
+            title="Column options"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+            </svg>
+          </button>
+          <AnimatePresence>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.92, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 top-8 z-20 w-36 rounded-xl border border-white/[0.08] bg-[#0d1117] py-1 shadow-panel"
+                >
+                  <button
+                    onClick={() => { setMenuOpen(false); setEditingTitle(true); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-slate-300 transition-colors hover:bg-white/[0.05] hover:text-white"
+                  >
+                    <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><path d="M12.586 2.586a2 2 0 112.828 2.828l-8.486 8.486a2 2 0 01-.828.503l-3 .75a.5.5 0 01-.614-.614l.75-3a2 2 0 01.503-.828l8.847-8.125z" /></svg>
+                    Rename
+                  </button>
+                  <div className="my-1 border-t border-white/[0.06]" />
+                  <button
+                    onClick={onDelete}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-red-400 transition-colors hover:bg-red-500/10"
+                  >
+                    <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><path d="M6.5 1h3a.5.5 0 01.5.5v1H6v-1a.5.5 0 01.5-.5zM11 2.5v-1A1.5 1.5 0 009.5 0h-3A1.5 1.5 0 005 1.5v1H2.506a.58.58 0 00-.01 1.16l.256 9.996a2 2 0 001.99 1.844h6.516a2 2 0 001.99-1.844l.255-9.996a.582.582 0 00-.01-1.16H11z" /></svg>
+                    Delete
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
+      {/* Progress bar */}
+      {column.tasks.length > 0 && (
+        <div className="mx-3 mb-2 h-[2px] rounded-full bg-white/[0.05]">
+          <div
+            className="h-full rounded-full bg-emerald-500/60 transition-all duration-500"
+            style={{ width: `${(completedCount / column.tasks.length) * 100}%` }}
+          />
+        </div>
+      )}
+
+      {/* Task list drop zone */}
       <div
         ref={setDroppableRef}
         className={clsx(
-          'flex-1 space-y-2 overflow-y-auto rounded-lg p-1 transition',
-          isOver && 'bg-brand-500/10 ring-2 ring-brand-400/50',
+          'flex-1 space-y-2 overflow-y-auto px-2 py-1 transition-colors duration-150',
+          isOver && 'rounded-lg bg-violet-500/[0.06] ring-1 ring-inset ring-violet-400/20',
         )}
       >
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
@@ -154,10 +198,10 @@ export default function Column({ column, onTaskClick }: Props) {
               <motion.div
                 key={task.id}
                 layout
-                initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.12 } }}
+                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
               >
                 <TaskCard task={task} onClick={() => onTaskClick(task)} />
               </motion.div>
@@ -166,11 +210,14 @@ export default function Column({ column, onTaskClick }: Props) {
         </SortableContext>
 
         {column.tasks.length === 0 && !adding && (
-          <p className="px-2 py-6 text-center text-xs text-slate-500">No tasks yet</p>
+          <div className="flex h-16 items-center justify-center">
+            <p className="text-[12px] text-slate-700">Drop tasks here</p>
+          </div>
         )}
       </div>
 
-      <div className="mt-2">
+      {/* Add task area */}
+      <div className="p-2 pt-1">
         <AnimatePresence mode="wait" initial={false}>
           {adding ? (
             <motion.form
@@ -180,7 +227,7 @@ export default function Column({ column, onTaskClick }: Props) {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.18 }}
+              transition={{ duration: 0.16 }}
             >
               <textarea
                 autoFocus
@@ -191,26 +238,20 @@ export default function Column({ column, onTaskClick }: Props) {
                     e.preventDefault();
                     onAddTaskSubmit(e as unknown as FormEvent);
                   }
-                  if (e.key === 'Escape') {
-                    setAdding(false);
-                    setTaskTitle('');
-                  }
+                  if (e.key === 'Escape') { setAdding(false); setTaskTitle(''); }
                 }}
-                placeholder="Task title..."
-                className="input min-h-[60px] resize-none"
+                placeholder="Task title…"
+                className="input min-h-[60px] text-[13px]"
                 maxLength={200}
               />
               <div className="flex items-center gap-2">
-                <button type="submit" className="btn-primary text-xs">
+                <button type="submit" className="btn-primary text-[12px] py-1.5">
                   Add task
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setAdding(false);
-                    setTaskTitle('');
-                  }}
-                  className="btn-ghost text-xs"
+                  onClick={() => { setAdding(false); setTaskTitle(''); }}
+                  className="btn-ghost text-[12px] py-1.5"
                 >
                   Cancel
                 </button>
@@ -220,13 +261,15 @@ export default function Column({ column, onTaskClick }: Props) {
             <motion.button
               key="trigger"
               onClick={() => setAdding(true)}
-              className="w-full rounded-lg px-2 py-2 text-left text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[12px] text-slate-600 transition-all duration-150 hover:bg-white/[0.04] hover:text-slate-300"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              whileHover={{ x: 2 }}
             >
-              + Add a task
+              <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M8 3a1 1 0 011 1v3h3a1 1 0 110 2H9v3a1 1 0 11-2 0V9H4a1 1 0 110-2h3V4a1 1 0 011-1z" />
+              </svg>
+              Add a task
             </motion.button>
           )}
         </AnimatePresence>

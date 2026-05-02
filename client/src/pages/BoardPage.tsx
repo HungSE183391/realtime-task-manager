@@ -98,35 +98,17 @@ export default function BoardPage() {
   );
 
   const moveMutation = useMutation({
-    mutationFn: ({
-      taskId,
-      columnId,
-      beforeId,
-      afterId,
-    }: {
-      taskId: string;
-      columnId: string;
-      beforeId: string | null;
-      afterId: string | null;
-    }) => updateTask(taskId, { columnId, beforeId, afterId }),
+    mutationFn: ({ taskId, columnId, beforeId, afterId }: { taskId: string; columnId: string; beforeId: string | null; afterId: string | null }) =>
+      updateTask(taskId, { columnId, beforeId, afterId }),
     onError: (err: any, _vars, ctx: any) => {
-      if (ctx?.previous) {
-        queryClient.setQueryData(['board', id], ctx.previous);
-      }
+      if (ctx?.previous) queryClient.setQueryData(['board', id], ctx.previous);
       toast.error(err?.response?.data?.error || 'Failed to move task');
     },
   });
 
   const moveColumnMutation = useMutation({
-    mutationFn: ({
-      columnId,
-      beforeId,
-      afterId,
-    }: {
-      columnId: string;
-      beforeId: string | null;
-      afterId: string | null;
-    }) => updateColumn(columnId, { beforeId, afterId }),
+    mutationFn: ({ columnId, beforeId, afterId }: { columnId: string; beforeId: string | null; afterId: string | null }) =>
+      updateColumn(columnId, { beforeId, afterId }),
     onError: (err: any) => toast.error(err?.response?.data?.error || 'Failed to reorder column'),
   });
 
@@ -196,14 +178,9 @@ export default function BoardPage() {
         return { ...old, board: { ...old.board, columns: reordered } };
       });
 
-      moveColumnMutation.mutate(
-        { columnId: activeColId, beforeId, afterId },
-        {
-          onError: () => {
-            if (previous) queryClient.setQueryData(['board', id], previous);
-          },
-        },
-      );
+      moveColumnMutation.mutate({ columnId: activeColId, beforeId, afterId }, {
+        onError: () => { if (previous) queryClient.setQueryData(['board', id], previous); },
+      });
       return;
     }
 
@@ -244,12 +221,8 @@ export default function BoardPage() {
     if (
       fromColumn.id === toColumnId &&
       ((beforeId === null && fromColumn.tasks[0]?.id === activeId) ||
-        (afterId !== null &&
-          fromColumn.tasks.findIndex((t) => t.id === activeId) ===
-            fromColumn.tasks.findIndex((t) => t.id === afterId) - 1))
-    ) {
-      return;
-    }
+        (afterId !== null && fromColumn.tasks.findIndex((t) => t.id === activeId) === fromColumn.tasks.findIndex((t) => t.id === afterId) - 1))
+    ) return;
 
     const previous = queryClient.getQueryData(['board', id]);
     queryClient.setQueryData<{ board: BoardDetail; role: Role }>(['board', id], (old) => {
@@ -264,27 +237,19 @@ export default function BoardPage() {
         if (c.id === toColumnId) {
           const without = c.tasks.filter((t) => t.id !== activeId);
           const beforePos = beforeId ? without.find((t) => t.id === beforeId)?.position ?? 0 : 0;
-          const afterPos = afterId
-            ? without.find((t) => t.id === afterId)?.position ?? beforePos + 2
-            : beforePos + 2;
+          const afterPos = afterId ? without.find((t) => t.id === afterId)?.position ?? beforePos + 2 : beforePos + 2;
           const synthPos = (beforePos + afterPos) / 2;
           const moved = { ...draggedFull, columnId: toColumnId, position: synthPos };
-          const next = [...without, moved].sort((a, b) => a.position - b.position);
-          return { ...c, tasks: next };
+          return { ...c, tasks: [...without, moved].sort((a, b) => a.position - b.position) };
         }
         return c;
       });
       return { ...old, board: { ...old.board, columns } };
     });
 
-    moveMutation.mutate(
-      { taskId: activeId, columnId: toColumnId, beforeId, afterId },
-      {
-        onError: () => {
-          if (previous) queryClient.setQueryData(['board', id], previous);
-        },
-      },
-    );
+    moveMutation.mutate({ taskId: activeId, columnId: toColumnId, beforeId, afterId }, {
+      onError: () => { if (previous) queryClient.setQueryData(['board', id], previous); },
+    });
   }
 
   function startEditTitle() {
@@ -305,48 +270,62 @@ export default function BoardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen">
+      <div className="flex h-screen flex-col">
         <Header />
-        <div className="p-8 text-slate-400">Loading board...</div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" />
+            <p className="text-[13px] text-slate-500">Loading board…</p>
+          </div>
+        </div>
       </div>
     );
   }
+
   if (error || !board) {
     return (
-      <div className="min-h-screen">
+      <div className="flex h-screen flex-col">
         <Header />
-        <div className="p-8">
-          <p className="mb-3 text-red-300">Failed to load board.</p>
-          <Link to="/" className="text-brand-300 hover:text-brand-200">
-            ← Back to dashboard
-          </Link>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="text-center">
+            <p className="mb-3 text-[14px] text-red-400">Failed to load board.</p>
+            <Link to="/" className="btn-secondary text-[13px]">
+              ← Back to boards
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   const columnIds = board.columns.map((c) => `col:${c.id}`);
+  const totalTasks = board.columns.reduce((sum, c) => sum + c.tasks.length, 0);
+  const completedTasks = board.columns.reduce((sum, c) => sum + c.tasks.filter((t) => t.completed).length, 0);
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col bg-[#080c14]">
       <Header />
+
+      {/* Board sub-header */}
       <motion.div
-        className="border-b border-white/5 bg-slate-950/40 backdrop-blur-xl"
-        initial={{ opacity: 0, y: -8 }}
+        className="border-b border-white/[0.06] bg-[#080c14]/80 backdrop-blur-xl"
+        initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.25 }}
       >
-        <div className="mx-auto flex max-w-full items-center justify-between gap-4 px-6 py-4">
+        <div className="flex items-center justify-between gap-4 px-5 py-3">
+          {/* Left: breadcrumb + title */}
           <div className="min-w-0 flex-1">
             <Link
               to="/"
-              className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 transition hover:text-brand-300"
+              className="mb-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 transition-colors hover:text-violet-400"
             >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
-                <path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" />
+              <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
+                <path d="M9.78 11.78a.75.75 0 01-1.06 0L4.47 7.53a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L6.06 7l3.72 3.72a.75.75 0 010 1.06z" />
               </svg>
               Boards
             </Link>
+
             {editingTitle ? (
               <input
                 autoFocus
@@ -355,78 +334,70 @@ export default function BoardPage() {
                 onBlur={commitTitle}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                  if (e.key === 'Escape') {
-                    setTitleDraft(board.title);
-                    setEditingTitle(false);
-                  }
+                  if (e.key === 'Escape') { setTitleDraft(board.title); setEditingTitle(false); }
                 }}
                 maxLength={120}
-                className="mt-0.5 w-full rounded-md border border-brand-400/40 bg-slate-950/40 px-2 py-1 text-2xl font-extrabold tracking-tight text-white outline-none ring-2 ring-brand-400/30"
+                className="block w-full rounded-lg border border-violet-400/40 bg-white/[0.04] px-2 py-1 text-[18px] font-bold text-white outline-none ring-2 ring-violet-400/20"
               />
             ) : (
-              <h1
-                onClick={startEditTitle}
-                title={isOwner ? 'Click to rename board' : board.title}
-                className={
-                  'truncate text-2xl font-extrabold tracking-tight text-white' +
-                  (isOwner ? ' cursor-text rounded-md transition hover:bg-white/5 hover:px-2' : '')
-                }
-              >
-                {board.title}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1
+                  onClick={startEditTitle}
+                  title={isOwner ? 'Click to rename' : board.title}
+                  className={`truncate text-[18px] font-bold tracking-tight text-white ${isOwner ? 'cursor-text rounded-md transition-colors hover:bg-white/[0.05] hover:px-1.5' : ''}`}
+                >
+                  {board.title}
+                </h1>
+                {totalTasks > 0 && (
+                  <span className="shrink-0 rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] text-slate-500">
+                    {completedTasks}/{totalTasks}
+                  </span>
+                )}
+              </div>
             )}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex -space-x-2">
-              {board.members.slice(0, 5).map((m) => (
+
+          {/* Right: member avatars + actions */}
+          <div className="flex items-center gap-2">
+            {/* Member avatars */}
+            <div className="flex -space-x-2 mr-1">
+              {board.members.slice(0, 4).map((m) => (
                 <motion.span
                   key={m.id}
-                  title={`${m.user.name} (${m.role})`}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-brand text-xs font-bold text-white ring-2 ring-slate-950"
-                  whileHover={{ y: -3, scale: 1.08 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                  title={`${m.user.name} · ${m.role}`}
+                  className="avatar h-7 w-7 text-[11px] ring-2 ring-[#080c14]"
+                  whileHover={{ y: -2, scale: 1.1 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 20 }}
                 >
                   {m.user.name.charAt(0).toUpperCase()}
                 </motion.span>
               ))}
-              {board.members.length > 5 && (
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-slate-200 ring-2 ring-slate-950">
-                  +{board.members.length - 5}
+              {board.members.length > 4 && (
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/[0.08] text-[10px] font-semibold text-slate-400 ring-2 ring-[#080c14]">
+                  +{board.members.length - 4}
                 </span>
               )}
             </div>
+
+            {/* Voice button */}
             <motion.button
               onClick={() => setVoiceOpen(true)}
-              className={
-                'btn-secondary relative ' +
-                (voice.joined
-                  ? 'border-emerald-400/40 text-emerald-200 ring-1 ring-emerald-400/30'
-                  : '')
-              }
-              aria-label="Open voice room"
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              title={
-                voice.joined
-                  ? `Voice room (${voiceCount} connected, you're in)`
-                  : voiceCount > 0
-                    ? `Voice room (${voiceCount} talking)`
-                    : 'Voice room'
-              }
+              className={`btn-secondary relative text-[12px] py-1.5 px-3 ${voice.joined ? 'border-emerald-400/30 text-emerald-300' : ''}`}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
             >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="-ml-0.5 mr-1.5 h-4 w-4">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
                 <path d="M12 14a3 3 0 003-3V6a3 3 0 10-6 0v5a3 3 0 003 3z" />
                 <path d="M19 11a1 1 0 10-2 0 5 5 0 01-10 0 1 1 0 10-2 0 7 7 0 006 6.92V20H8a1 1 0 100 2h8a1 1 0 100-2h-3v-2.08A7 7 0 0019 11z" />
               </svg>
-              Voice
+              <span className="hidden sm:block">Voice</span>
               <AnimatePresence>
                 {voiceCount > 0 && (
                   <motion.span
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                    className="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-white shadow-md shadow-emerald-900/50"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold text-white ring-1 ring-[#080c14]"
                   >
                     {voiceCount}
                   </motion.span>
@@ -434,64 +405,64 @@ export default function BoardPage() {
               </AnimatePresence>
               {voice.joined && (
                 <motion.span
-                  className="absolute -right-1 -bottom-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-950"
-                  animate={{ scale: [1, 1.3, 1] }}
-                  transition={{ duration: 1.6, repeat: Infinity }}
+                  className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-1 ring-[#080c14]"
+                  animate={{ scale: [1, 1.4, 1] }}
+                  transition={{ duration: 1.8, repeat: Infinity }}
                 />
               )}
             </motion.button>
+
+            {/* Chat button */}
             <motion.button
               onClick={() => setChatOpen(true)}
-              className="btn-secondary relative"
-              aria-label="Open chat"
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+              className="btn-secondary relative text-[12px] py-1.5 px-3"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
             >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="-ml-0.5 mr-1.5 h-4 w-4">
-                <path d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" />
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2z" />
               </svg>
-              Chat
+              <span className="hidden sm:block">Chat</span>
               <AnimatePresence>
                 {unreadCount > 0 && (
                   <motion.span
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                    className="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-md shadow-red-900/50"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white ring-1 ring-[#080c14]"
                   >
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </motion.span>
                 )}
               </AnimatePresence>
             </motion.button>
+
+            {/* Members button */}
             <motion.button
               onClick={() => setInviteOpen(true)}
-              className="btn-secondary"
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+              className="btn-secondary text-[12px] py-1.5 px-3"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
             >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="-ml-0.5 mr-1.5 h-4 w-4">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
                 <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
               </svg>
-              Members
+              <span className="hidden sm:block">Members</span>
             </motion.button>
           </div>
         </div>
       </motion.div>
 
+      {/* Kanban board */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
-        onDragCancel={() => {
-          setActiveTask(null);
-          setActiveColumn(null);
-        }}
+        onDragCancel={() => { setActiveTask(null); setActiveColumn(null); }}
       >
-        <main className="flex-1 overflow-x-auto">
-          <div className="flex h-full items-start gap-4 p-6">
+        <main className="flex-1 overflow-x-auto overflow-y-hidden">
+          <div className="flex h-full items-start gap-3 p-5">
             <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
               {board.columns.map((c) => (
                 <Column key={c.id} column={c} onTaskClick={(t) => setSelectedTask(t)} />
@@ -501,24 +472,21 @@ export default function BoardPage() {
           </div>
         </main>
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
           {activeTask ? (
-            <div className="rotate-2 opacity-95">
+            <div className="rotate-1 scale-[1.03] opacity-95 w-[272px]">
               <TaskCard task={activeTask} onClick={() => undefined} />
             </div>
           ) : activeColumn ? (
-            <div className="glass w-72 rotate-1 p-2 opacity-90 shadow-2xl shadow-black/60">
-              <div className="px-2 py-1 text-sm font-bold text-slate-100">
-                {activeColumn.title}{' '}
-                <span className="ml-1 text-xs font-normal text-slate-500">
-                  {activeColumn.tasks.length} tasks
-                </span>
-              </div>
+            <div className="w-[272px] rotate-1 rounded-xl border border-violet-400/30 bg-[#0a0f1a]/90 px-3 py-2.5 opacity-90 shadow-glow-lg backdrop-blur-xl">
+              <p className="text-[13px] font-semibold text-slate-200">{activeColumn.title}</p>
+              <p className="text-[11px] text-slate-600">{activeColumn.tasks.length} tasks</p>
             </div>
           ) : null}
         </DragOverlay>
       </DndContext>
 
+      {/* Panels & Modals */}
       <InviteMemberModal
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}

@@ -29,72 +29,88 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md animate-slide-up">
+      <div className="w-full max-w-[380px] animate-slide-up">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-5 rounded-2xl bg-white/95 p-4 shadow-glow ring-1 ring-white/10">
-            <img
-              src="/logo.png"
-              alt="Realtime Task Manager"
-              className="h-32 w-auto"
-            />
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/95 shadow-lg ring-1 ring-white/10">
+            <img src="/logo.png" alt="TaskFlow" className="h-8 w-auto" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-white">
-            Create your account
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">Start collaborating in seconds.</p>
+          <h1 className="text-[22px] font-bold tracking-tight text-white">Create your account</h1>
+          <p className="mt-1 text-[13px] text-slate-500">Start collaborating with your team.</p>
         </div>
 
-        <form onSubmit={onSubmit} className="card-hover card p-7">
-          <div className="mb-4">
-            <label className="label">Name</label>
-            <input
-              type="text"
-              className="input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              autoFocus
-              placeholder="Your name"
-            />
+        <form onSubmit={onSubmit} className="card p-6 shadow-panel">
+          <div className="space-y-4">
+            <div>
+              <label className="label">Full name</label>
+              <input
+                type="text"
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                autoFocus
+                placeholder="Your name"
+              />
+            </div>
+
+            <div>
+              <label className="label">Email address</label>
+              <input
+                type="email"
+                className="input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="label">Password</label>
+              <input
+                type="password"
+                className="input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="At least 6 characters"
+              />
+            </div>
           </div>
 
-          <div className="mb-4">
-            <label className="label">Email</label>
-            <input
-              type="email"
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="label">Password</label>
-            <input
-              type="password"
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              placeholder="At least 6 characters"
-            />
-          </div>
-
-          <button type="submit" className="btn-primary w-full" disabled={loading}>
-            {loading ? 'Creating...' : 'Create account'}
+          <button
+            type="submit"
+            className="btn-primary mt-5 w-full justify-center py-2.5 text-[13px]"
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Spinner />
+                Creating account…
+              </span>
+            ) : (
+              'Create account'
+            )}
           </button>
 
-          <p className="mt-5 text-center text-sm text-slate-400">
+          <p className="mt-5 text-center text-[13px] text-slate-500">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-brand-300 hover:text-brand-200">
+            <Link to="/login" className="font-medium text-violet-400 hover:text-violet-300 transition-colors">
               Sign in
             </Link>
           </p>
         </form>
       </div>
     </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
   );
 }

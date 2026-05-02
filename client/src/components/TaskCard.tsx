@@ -46,105 +46,105 @@ export default function TaskCard({ task, onClick }: Props) {
       {...listeners}
       onClick={onClick}
       className={clsx(
-        'group relative cursor-grab select-none rounded-lg border bg-slate-900/70 p-3 shadow-md shadow-black/30 backdrop-blur-md transition active:cursor-grabbing',
+        'group relative cursor-grab select-none rounded-xl border bg-[#0d1117]/80 p-3 shadow-sm backdrop-blur-sm transition-all duration-150 active:cursor-grabbing',
         isDragging
-          ? 'border-brand-400/60 opacity-50 shadow-glow-lg'
-          : 'border-white/10 hover:-translate-y-0.5 hover:border-brand-400/40 hover:shadow-glow',
-        task.completed && 'opacity-60',
+          ? 'border-violet-400/50 opacity-40 shadow-glow rotate-1 scale-[1.02]'
+          : task.completed
+            ? 'border-white/[0.05] opacity-50 hover:opacity-70 hover:border-white/[0.09]'
+            : 'border-white/[0.08] hover:border-white/[0.15] hover:bg-[#111827]/80 hover:-translate-y-px hover:shadow-md',
       )}
     >
       <div className="flex items-start gap-2.5">
+        {/* Completion toggle */}
         <motion.button
           type="button"
           onClick={onToggleComplete}
           onPointerDown={(e) => e.stopPropagation()}
-          aria-label={task.completed ? 'Mark as not completed' : 'Mark as completed'}
-          title={task.completed ? 'Mark as not completed' : 'Mark as completed'}
-          whileTap={{ scale: 0.85 }}
-          animate={task.completed ? { scale: [1, 1.25, 1] } : { scale: 1 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+          aria-label={task.completed ? 'Mark incomplete' : 'Mark complete'}
+          whileTap={{ scale: 0.82 }}
           className={clsx(
-            'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition',
+            'mt-[2px] flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-full border transition-all duration-150',
             task.completed
-              ? 'border-emerald-400 bg-emerald-400 text-slate-950'
-              : 'border-slate-600 bg-transparent text-transparent hover:border-emerald-400 hover:text-emerald-400',
+              ? 'border-emerald-400 bg-emerald-400 text-[#0d1117]'
+              : 'border-white/20 bg-transparent text-transparent hover:border-emerald-400/70',
           )}
         >
-          <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3">
+          <svg viewBox="0 0 12 12" fill="none" className="h-2 w-2">
             <path
-              d="M3 8.5L6.5 12L13 5"
+              d="M2 6.5L4.5 9L10 3"
               stroke="currentColor"
-              strokeWidth="2.5"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
         </motion.button>
+
+        {/* Title */}
         <p
           className={clsx(
-            'flex-1 text-sm font-medium leading-snug',
-            task.completed ? 'text-slate-500 line-through' : 'text-slate-100',
+            'flex-1 text-[13px] font-medium leading-snug',
+            task.completed ? 'text-slate-600 line-through' : 'text-slate-200',
           )}
         >
           {task.title}
         </p>
       </div>
 
+      {/* Description preview */}
       {task.description && (
         <p
           className={clsx(
-            'mt-1.5 line-clamp-2 pl-6 text-xs',
-            task.completed ? 'text-slate-600' : 'text-slate-400',
+            'mt-1.5 line-clamp-2 pl-[23px] text-[12px] leading-relaxed',
+            task.completed ? 'text-slate-700' : 'text-slate-500',
           )}
         >
           {task.description}
         </p>
       )}
-      {(task.assignedTo || due) && (
-        <div className="mt-2.5 flex items-center justify-between gap-2 pl-6 text-xs">
-          {task.assignedTo ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2 py-0.5 text-slate-300 ring-1 ring-white/10">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-gradient-brand text-[10px] font-bold text-white">
-                {task.assignedTo.name.charAt(0).toUpperCase()}
+
+      {/* Meta row */}
+      {(task.assignedTo || due || (task._count?.comments ?? 0) > 0 || (task._count?.attachments ?? 0) > 0) && (
+        <div className="mt-2.5 flex items-center justify-between gap-2 pl-[23px]">
+          <div className="flex items-center gap-2">
+            {task.assignedTo && (
+              <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <span className="avatar h-4 w-4 text-[9px]">
+                  {task.assignedTo.name.charAt(0).toUpperCase()}
+                </span>
+                <span className="hidden sm:block">{task.assignedTo.name.split(' ')[0]}</span>
               </span>
-              {task.assignedTo.name}
-            </span>
-          ) : (
-            <span />
-          )}
+            )}
+            {(task._count?.comments ?? 0) > 0 && (
+              <span className="flex items-center gap-1 text-[11px] text-slate-600" title="Comments">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
+                  <path d="M14 4v8a1.5 1.5 0 01-1.5 1.5H5l-3 2.5V4A1.5 1.5 0 013.5 2.5h9A1.5 1.5 0 0114 4z" />
+                </svg>
+                {task._count?.comments}
+              </span>
+            )}
+            {(task._count?.attachments ?? 0) > 0 && (
+              <span className="flex items-center gap-1 text-[11px] text-slate-600" title="Attachments">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
+                  <path d="M9.5 2.5a3 3 0 014.243 4.243L6.5 14a4.5 4.5 0 11-6.364-6.364L7.293 0.5" />
+                </svg>
+                {task._count?.attachments}
+              </span>
+            )}
+          </div>
+
           {due && (
             <span
               className={clsx(
-                'rounded-md px-1.5 py-0.5 font-semibold ring-1',
+                'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold',
                 task.completed
-                  ? 'bg-slate-800/50 text-slate-500 line-through ring-slate-700'
+                  ? 'text-slate-600 line-through'
                   : overdue
-                    ? 'bg-red-500/15 text-red-300 ring-red-400/30'
-                    : 'bg-amber-500/15 text-amber-300 ring-amber-400/30',
+                    ? 'bg-red-500/10 text-red-400 ring-1 ring-red-400/25'
+                    : 'bg-amber-500/8 text-amber-400 ring-1 ring-amber-400/20',
               )}
             >
-              {due.toLocaleDateString()}
-            </span>
-          )}
-        </div>
-      )}
-
-      {((task._count?.comments ?? 0) > 0 || (task._count?.attachments ?? 0) > 0) && (
-        <div className="mt-2 flex items-center gap-3 pl-6 text-[11px] text-slate-400">
-          {(task._count?.comments ?? 0) > 0 && (
-            <span className="inline-flex items-center gap-1" title="Comments">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                <path d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2z" />
-              </svg>
-              {task._count?.comments}
-            </span>
-          )}
-          {(task._count?.attachments ?? 0) > 0 && (
-            <span className="inline-flex items-center gap-1" title="Attachments">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                <path d="M9.207 14.05a2.5 2.5 0 11-3.535-3.536l5.656-5.656a4 4 0 015.657 5.657L9.293 17.207a5.5 5.5 0 11-7.778-7.778l4.95-4.95a1 1 0 011.414 1.415l-4.95 4.95a3.5 3.5 0 104.95 4.95l7.69-7.692a2 2 0 10-2.827-2.829L7.086 11.93a.5.5 0 00.707.708l5.65-5.65a1 1 0 011.415 1.414l-5.65 5.65z" />
-              </svg>
-              {task._count?.attachments}
+              {due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
           )}
         </div>
