@@ -13,3 +13,7 @@ server/prisma/migrations/dev.db*
 
 # Uploads
 server/uploads/
+
+# Cursor local skills
+.local/
+
